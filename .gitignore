@@ -12,7 +12,7 @@ coverage/
 # Runtime data
 .data/
 **/.data/
-**/**/.data/
+/apps/server/.data/
 *.sqlite
 *.sqlite-shm
 *.sqlite-wal
