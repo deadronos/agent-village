@@ -2,6 +2,9 @@ import type { Agent, AgentEvent, AgentStatus, BuildingVisualState, LiveMessage }
 import { deriveAgentCounts, deriveBuildingVisualStates, filterAgents } from "@agent-village/shared";
 import { create } from "zustand";
 
+export const EVENT_HISTORY_LIMIT = 120;
+export const MAX_RESIDENT_DOTS = 5;
+
 export type ConnectionState = "connected" | "connecting" | "offline" | "mock";
 
 type LiveEventPayload = Extract<LiveMessage, { type: "event" }>;
@@ -24,6 +27,7 @@ type DashboardStore = {
   setStatusFilter(status?: AgentStatus): void;
   setSearchQuery(query: string): void;
   setConnectionState(state: ConnectionState): void;
+  deselectAll(): void;
 };
 
 export const useDashboardStore = create<DashboardStore>((set) => ({
@@ -50,7 +54,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   setSnapshot(payload) {
     set({
       agents: Object.fromEntries(payload.agents.map((agent) => [agent.id, agent])),
-      events: payload.events.slice(0, 120)
+      events: payload.events.slice(0, EVENT_HISTORY_LIMIT)
     });
   },
   ingestLiveEvent(payload) {
@@ -59,7 +63,7 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
         ...state.agents,
         [payload.agent.id]: payload.agent
       },
-      events: [payload.event, ...state.events.filter((event) => event.id !== payload.event.id)].slice(0, 120)
+      events: [payload.event, ...state.events.filter((event) => event.id !== payload.event.id)].slice(0, EVENT_HISTORY_LIMIT)
     }));
   },
   selectAgent(agentId) {
@@ -87,6 +91,15 @@ export const useDashboardStore = create<DashboardStore>((set) => ({
   },
   setConnectionState(connectionState) {
     set({ connectionState });
+  },
+  deselectAll() {
+    set({
+      selectedAgentId: undefined,
+      selectedBuildingId: undefined,
+      hoveredBuildingId: undefined,
+      statusFilter: undefined,
+      searchQuery: ""
+    });
   }
 }));
 

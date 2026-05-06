@@ -5,12 +5,18 @@ import { isoToScreen, isRoadTile, mapHeight, mapWidth, tileHeight, tileWidth } f
 import { getVillageOrigin } from "./camera";
 import { statusColor, statusLabel } from "./effects";
 
+const MAX_RESIDENT_DOTS = 5;
+
+const HIT_AREA_SCALE_X = 0.9;
+const HIT_AREA_SCALE_Y = 1.0;
+
 export type RenderVillageOptions = {
   selectedBuildingId: string | undefined;
   hoveredBuildingId: string | undefined;
   statusFilter: AgentStatus | undefined;
   buildingStates: BuildingVisualState[];
   onSelectBuilding: (buildingId: string) => void;
+  onDeselect: () => void;
   onHoverBuilding: (buildingId?: string) => void;
   tick: number;
 };
@@ -25,6 +31,14 @@ export function renderVillage(root: Container, width: number, height: number, op
   const origin = getVillageOrigin(width);
   const stateByBuilding = new Map(options.buildingStates.map((state) => [state.buildingId, state]));
 
+  // Background click area for deselect
+  const bg = new Graphics();
+  bg.rect(-5000, -5000, 10000, 10000);
+  bg.fill({ color: 0x000000, alpha: 0 });
+  bg.eventMode = "static";
+  bg.on("pointertap", options.onDeselect);
+  scene.addChild(bg);
+
   drawTerrain(scene, origin.x, origin.y);
 
   for (const building of buildingDefinitions) {
@@ -35,26 +49,41 @@ export function renderVillage(root: Container, width: number, height: number, op
     const isFiltered = !options.statusFilter || status === options.statusFilter;
     const point = isoToScreen(building.x, building.y, origin.x, origin.y);
     const container = new Container();
-    container.eventMode = "static";
-    container.cursor = "pointer";
-    container.hitArea = new Polygon([-82, -96, 90, -96, 124, 44, -112, 48]);
-    container.on("pointertap", () => options.onSelectBuilding(building.id));
-    container.on("pointerover", () => options.onHoverBuilding(building.id));
-    container.on("pointerout", () => options.onHoverBuilding(undefined));
-    container.alpha = isFiltered ? 1 : 0.28;
     container.x = point.x;
     container.y = point.y;
 
     const pulse = status === "running" ? 0.5 + Math.sin(options.tick / 9) * 0.18 : status === "error" ? 0.65 : 0.22;
+    const hitArea = createBuildingHitArea(building.width, building.depth);
     drawSelection(container, isSelected || isHovered, status, pulse);
     drawBuildingBody(container, building.width, building.depth, building.height, building.color, building.roofColor, status);
     drawResidentDots(container, state?.agentCount ?? 0, status, options.tick);
     drawLabel(container, building.name, status, state?.agentCount ?? 0, building.height);
 
+    container.hitArea = hitArea;
+    container.eventMode = "static";
+    container.cursor = "pointer";
+    container.on("pointertap", () => options.onSelectBuilding(building.id));
+    container.on("pointerover", () => options.onHoverBuilding(building.id));
+    container.on("pointerout", () => options.onHoverBuilding(undefined));
+    container.alpha = isFiltered ? 1 : 0.28;
+
     scene.addChild(container);
   }
 
   drawForestFrame(scene, width, height, options.tick);
+}
+
+function createBuildingHitArea(widthTiles: number, depthTiles: number): Polygon {
+  const halfW = (widthTiles * tileWidth * HIT_AREA_SCALE_X) / 2;
+  const halfD = (depthTiles * tileWidth * HIT_AREA_SCALE_Y) / 2;
+  const topY = -20;
+  const bottomY = 50;
+  return new Polygon([
+    -halfW, bottomY,
+    halfW, bottomY,
+    halfW + 20, topY,
+    -halfW - 20, topY
+  ]);
 }
 
 function drawTerrain(scene: Container, originX: number, originY: number) {
@@ -146,7 +175,7 @@ function drawBuildingBody(
 }
 
 function drawResidentDots(container: Container, count: number, status: AgentStatus, tick: number) {
-  const visibleCount = Math.min(count, 5);
+  const visibleCount = Math.min(count, MAX_RESIDENT_DOTS);
   for (let index = 0; index < visibleCount; index += 1) {
     const dot = new Graphics();
     dot.circle(0, 0, 4);

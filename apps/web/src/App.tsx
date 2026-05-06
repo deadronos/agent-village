@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { useEffect, useState } from "react";
 import { DashboardLayout } from "./app/DashboardLayout";
-import { fetchInitialData } from "./api/client";
+import { fetchInitialData, fetchUptime } from "./api/client";
 import { connectLiveStream } from "./api/liveStream";
 import { seedAgents } from "./mock/mockAgents";
 import { startMockSimulation } from "./mock/mockEvents";
@@ -8,6 +9,8 @@ import { useDashboardStore } from "./stores/dashboardStore";
 import "./styles/app.css";
 
 export default function App() {
+  const [serverStartTime, setServerStartTime] = useState<number | null>(null);
+
   useEffect(() => {
     const store = useDashboardStore.getState();
     store.reset(seedAgents);
@@ -21,6 +24,12 @@ export default function App() {
         (payload) => useDashboardStore.getState().ingestLiveEvent({ type: "event", ...payload })
       );
     };
+
+    void fetchUptime()
+      .then((uptime) => setServerStartTime(uptime.startedAt))
+      .catch(() => {
+        // server not available, will use mock
+      });
 
     void fetchInitialData()
       .then((payload) => {
@@ -62,5 +71,9 @@ export default function App() {
     };
   }, []);
 
-  return <DashboardLayout />;
+  return (
+    <ErrorBoundary>
+      <DashboardLayout serverStartTime={serverStartTime} />
+    </ErrorBoundary>
+  );
 }

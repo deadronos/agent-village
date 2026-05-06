@@ -1,11 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useShallow } from "zustand/react/shallow";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deriveBuildingVisualStates } from "@agent-village/shared";
 import { renderVillage } from "./pixi/renderBuildings";
 import { createPixiApp } from "./pixi/createPixiApp";
-import {
-  useDashboardStore
-} from "../stores/dashboardStore";
+import { useDashboardStore } from "../stores/dashboardStore";
 
 export function VillageCanvas() {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -15,6 +12,7 @@ export function VillageCanvas() {
   const selectedBuildingId = useDashboardStore((state) => state.selectedBuildingId);
   const hoveredBuildingId = useDashboardStore((state) => state.hoveredBuildingId);
   const statusFilter = useDashboardStore((state) => state.statusFilter);
+  const deselectAll = useDashboardStore((state) => state.deselectAll);
   const selectBuilding = useDashboardStore((state) => state.selectBuilding);
   const hoverBuilding = useDashboardStore((state) => state.hoverBuilding);
   const [tick, setTick] = useState(0);
@@ -46,6 +44,8 @@ export function VillageCanvas() {
 
   const memoizedStates = useMemo(() => buildingStates, [buildingStates]);
 
+  const onDeselect = useCallback(() => deselectAll(), [deselectAll]);
+
   useEffect(() => {
     const app = appRef.current;
     if (!app) return;
@@ -56,10 +56,11 @@ export function VillageCanvas() {
       hoveredBuildingId,
       statusFilter,
       onSelectBuilding: selectBuilding,
+      onDeselect,
       onHoverBuilding: hoverBuilding,
       tick
     });
-  }, [memoizedStates, selectedBuildingId, hoveredBuildingId, statusFilter, selectBuilding, hoverBuilding, tick]);
+  }, [memoizedStates, selectedBuildingId, hoveredBuildingId, statusFilter, selectBuilding, deselectAll, hoverBuilding, tick]);
 
   return (
     <section className="village-stage" aria-label="Isometric agent village">

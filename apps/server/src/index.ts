@@ -39,6 +39,10 @@ export async function buildServer(options: { store?: EventStore; enableMockAdapt
     startedAt
   });
 
+  app.get("/uptime", async () => ({
+    startedAt
+  }));
+
   if (options.enableMockAdapter ?? process.env.AGENT_VILLAGE_MOCK_ADAPTER !== "0") {
     let sequence = 0;
     const timer = setInterval(() => {

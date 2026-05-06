@@ -462,6 +462,13 @@ kbd {
   cursor: pointer;
 }
 
+.empty-list {
+  color: #8f9baa;
+  font-size: 13px;
+  padding: 20px 0;
+  text-align: center;
+}
+
 .village-stage {
   position: relative;
   min-width: 0;
